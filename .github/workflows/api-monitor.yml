@@ -1,117 +1,111 @@
-name: API Monitor 24/7 - Date Organized
+name: API Monitor 24/7 - Alternative Schedule
 
-# When to run this workflow
 on:
   schedule:
-    # Runs every 5 minutes
-    - cron: '*/5 * * * *'
+    # Try every 10 minutes instead of 5 (sometimes more reliable)
+    - cron: '*/10 * * * *'
+    # Also try every 15 minutes
+    - cron: '0,15,30,45 * * * *'
   
-  # Allow manual triggering for testing
+  # Allow manual triggering
   workflow_dispatch:
+  
+  # Trigger on push for testing
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'data/**'  # Don't trigger on data file changes
 
 jobs:
   monitor-api:
     runs-on: ubuntu-latest
     
     steps:
-    # Step 1: Get the repository code
+    # Add a step to show when workflow runs
+    - name: Workflow Started
+      run: |
+        echo "🚀 Workflow started at: $(date)"
+        echo "Trigger event: ${{ github.event_name }}"
+        echo "Repository: ${{ github.repository }}"
+    
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    # Step 2: Create date-based directory structure
     - name: Create Date-Based Directory Structure
       run: |
-        # Get current date and time components
         YEAR=$(date +"%Y")
         MONTH=$(date +"%m")
         DAY=$(date +"%d")
         DATE=$(date +"%Y-%m-%d")
         
-        # Create nested directory structure: data/2024/12/04/
         mkdir -p "data/${YEAR}/${MONTH}/${DAY}"
-        
-        # Also create a "latest" symlink for easy access
         mkdir -p data/latest
         
         echo "📁 Created directory structure:"
         echo "   data/${YEAR}/${MONTH}/${DAY}/"
         
-        # Set environment variables for other steps
         echo "YEAR=${YEAR}" >> $GITHUB_ENV
         echo "MONTH=${MONTH}" >> $GITHUB_ENV
         echo "DAY=${DAY}" >> $GITHUB_ENV
         echo "DATE=${DATE}" >> $GITHUB_ENV
         echo "DATA_DIR=data/${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
     
-    # Step 3: Call API and save to date-organized folder
     - name: Call API and Store Response
       run: |
-        # Get current timestamp for filename
         TIMESTAMP=$(date +"%H%M%S")
-        FULL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
         
         echo "🚀 Calling API at $(date)..."
         echo "📁 Saving to: ${DATA_DIR}/"
+        echo "🔧 Triggered by: ${{ github.event_name }}"
         
-        # Call your API and save response with metadata
         curl -s "https://6cc502fvz8.execute-api.ap-south-1.amazonaws.com/prod" \
-          -w "\n---METADATA---\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}\nTIME_CONNECT:%{time_connect}\nSIZE_DOWNLOAD:%{size_download}\nTIMESTAMP:$(date '+%Y-%m-%d %H:%M:%S UTC')\n" \
+          -w "\n---METADATA---\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}\nTIME_CONNECT:%{time_connect}\nSIZE_DOWNLOAD:%{size_download}\nTIMESTAMP:$(date '+%Y-%m-%d %H:%M:%S UTC')\nTRIGGER:${{ github.event_name }}\n" \
           > "${DATA_DIR}/api_response_${TIMESTAMP}.txt"
         
-        # Extract clean JSON response
-        head -n -7 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/api_data_${TIMESTAMP}.json"
+        head -n -8 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/api_data_${TIMESTAMP}.json"
+        tail -n 7 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/metadata_${TIMESTAMP}.txt"
         
-        # Create metadata file
-        tail -n 6 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/metadata_${TIMESTAMP}.txt"
-        
-        # Extract status and response time for logging
         HTTP_STATUS=$(grep "HTTP_STATUS:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
         RESPONSE_TIME=$(grep "TIME_TOTAL:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
+        TRIGGER_TYPE=$(grep "TRIGGER:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
         
-        # Create daily summary file
-        echo "$(date '+%H:%M:%S'): Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, File=api_response_${TIMESTAMP}.txt" >> "${DATA_DIR}/daily_log.txt"
+        echo "$(date '+%H:%M:%S'): Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}, File=api_response_${TIMESTAMP}.txt" >> "${DATA_DIR}/daily_log.txt"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): ${DATE} Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}" >> "data/master_log.txt"
         
-        # Create/update master log
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): ${DATE} Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s" >> "data/master_log.txt"
-        
-        # Copy latest response to easy-access location
         cp "${DATA_DIR}/api_data_${TIMESTAMP}.json" "data/latest/latest_response.json"
         cp "${DATA_DIR}/metadata_${TIMESTAMP}.txt" "data/latest/latest_metadata.txt"
         
         echo "✅ API Response Summary:"
         echo "Status Code: $HTTP_STATUS"
         echo "Response Time: ${RESPONSE_TIME}s"
+        echo "Triggered by: ${TRIGGER_TYPE}"
         echo "Saved to: ${DATA_DIR}/api_response_${TIMESTAMP}.txt"
         
-        # Show first few lines of response
         echo "First 3 lines of API response:"
         head -3 "${DATA_DIR}/api_data_${TIMESTAMP}.json"
     
-    # Step 4: Generate daily statistics
     - name: Generate Daily Statistics
       run: |
-        # Count today's API calls
         TODAY_TOTAL=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
         TODAY_SUCCESS=$(grep -c "HTTP_STATUS:200" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
         TODAY_ERRORS=$(grep -c "HTTP_STATUS:[^2]" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
         
-        # Calculate success rate
         if [ "$TODAY_TOTAL" -gt 0 ]; then
           SUCCESS_RATE=$(( TODAY_SUCCESS * 100 / TODAY_TOTAL ))
         else
           SUCCESS_RATE=0
         fi
         
-        # Create/update daily stats file using echo instead of heredoc
         echo "{" > "${DATA_DIR}/daily_stats.json"
         echo "  \"date\": \"${DATE}\"," >> "${DATA_DIR}/daily_stats.json"
         echo "  \"total_calls\": ${TODAY_TOTAL}," >> "${DATA_DIR}/daily_stats.json"
         echo "  \"successful_calls\": ${TODAY_SUCCESS}," >> "${DATA_DIR}/daily_stats.json"
         echo "  \"failed_calls\": ${TODAY_ERRORS}," >> "${DATA_DIR}/daily_stats.json"
         echo "  \"success_rate_percent\": ${SUCCESS_RATE}," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"last_updated\": \"$(date '+%Y-%m-%d %H:%M:%S UTC')\"" >> "${DATA_DIR}/daily_stats.json"
+        echo "  \"last_updated\": \"$(date '+%Y-%m-%d %H:%M:%S UTC')\"," >> "${DATA_DIR}/daily_stats.json"
+        echo "  \"last_trigger\": \"${{ github.event_name }}\"" >> "${DATA_DIR}/daily_stats.json"
         echo "}" >> "${DATA_DIR}/daily_stats.json"
         
         echo "📊 Daily Statistics for ${DATE}:"
@@ -120,76 +114,19 @@ jobs:
         echo "   Failed: ${TODAY_ERRORS}"
         echo "   Success rate: ${SUCCESS_RATE}%"
         
-        # Copy stats to latest folder
         cp "${DATA_DIR}/daily_stats.json" "data/latest/today_stats.json"
     
-    # Step 5: Create monthly summary (if it's a new month)
-    - name: Generate Monthly Summary
-      run: |
-        # Check if this is the first day of the month
-        if [ "$DAY" = "01" ]; then
-          echo "📅 First day of month - generating monthly summary"
-          
-          PREV_MONTH=$(date -d "last month" +"%m")
-          PREV_YEAR=$(date -d "last month" +"%Y")
-          
-          if [ -d "data/${PREV_YEAR}/${PREV_MONTH}" ]; then
-            MONTHLY_DIR="data/${PREV_YEAR}/${PREV_MONTH}"
-            TOTAL_DAYS=$(find "${MONTHLY_DIR}" -mindepth 1 -maxdepth 1 -type d | wc -l)
-            TOTAL_CALLS=$(find "${MONTHLY_DIR}" -name "api_response_*.txt" | wc -l)
-            
-            # Create monthly summary using echo instead of heredoc
-            echo "{" > "${MONTHLY_DIR}/monthly_summary.json"
-            echo "  \"month\": \"${PREV_YEAR}-${PREV_MONTH}\"," >> "${MONTHLY_DIR}/monthly_summary.json"
-            echo "  \"total_days_monitored\": ${TOTAL_DAYS}," >> "${MONTHLY_DIR}/monthly_summary.json"
-            echo "  \"total_api_calls\": ${TOTAL_CALLS}," >> "${MONTHLY_DIR}/monthly_summary.json"
-            echo "  \"average_calls_per_day\": $(( TOTAL_CALLS / TOTAL_DAYS ))," >> "${MONTHLY_DIR}/monthly_summary.json"
-            echo "  \"generated_on\": \"$(date '+%Y-%m-%d %H:%M:%S UTC')\"" >> "${MONTHLY_DIR}/monthly_summary.json"
-            echo "}" >> "${MONTHLY_DIR}/monthly_summary.json"
-            
-            echo "✅ Monthly summary created for ${PREV_YEAR}-${PREV_MONTH}"
-          fi
-        else
-          echo "ℹ️ Not first day of month - skipping monthly summary"
-        fi
-    
-    # Step 6: Cleanup old data (optional - keeps last 30 days)
-    - name: Cleanup Old Data
-      run: |
-        echo "🧹 Checking for old data to cleanup..."
-        
-        # Find directories older than 30 days
-        find data/ -type d -name "[0-9][0-9]" -mtime +30 | while read old_dir; do
-          if [ -d "$old_dir" ]; then
-            echo "Removing old directory: $old_dir"
-            rm -rf "$old_dir"
-          fi
-        done
-        
-        # Keep master log under control (keep last 1000 lines)
-        if [ -f "data/master_log.txt" ]; then
-          tail -n 1000 "data/master_log.txt" > "data/master_log_temp.txt"
-          mv "data/master_log_temp.txt" "data/master_log.txt"
-        fi
-        
-        echo "✅ Cleanup completed"
-    
-    # Step 7: Commit and push all the organized data
     - name: Commit and Push Organized Data
       run: |
-        # Configure git
         git config --local user.email "action@github.com"
         git config --local user.name "API Monitor Bot"
         
-        # Add all new files
         git add data/
         
-        # Check if there are changes to commit
         if [ -n "$(git status --porcelain)" ]; then
-          # Count total API calls for this date
           TODAY_CALLS=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
           
-          git commit -m "📊 API Monitor Data ${DATE} (#${TODAY_CALLS}) - $(date '+%H:%M:%S UTC')"
+          git commit -m "📊 API Monitor Data ${DATE} (#${TODAY_CALLS}) - $(date '+%H:%M:%S UTC') [${{ github.event_name }}]"
           git push
           
           echo "✅ Committed and pushed organized data for ${DATE}"
@@ -197,36 +134,11 @@ jobs:
           echo "ℹ️ No new data to commit"
         fi
     
-    # Step 8: Health check and summary
-    - name: API Health Check & Summary
+    - name: Workflow Completion Summary
       run: |
-        echo "🔍 Final Health Check Summary:"
-        echo "=================="
-        echo "Date: ${DATE}"
-        echo "Data stored in: ${DATA_DIR}/"
-        
-        # Get latest response info
-        LATEST_RESPONSE=$(ls -t ${DATA_DIR}/api_response_*.txt | head -1)
-        if [ -f "$LATEST_RESPONSE" ]; then
-          LATEST_META=$(echo "$LATEST_RESPONSE" | sed 's/api_response/metadata/')
-          HTTP_STATUS=$(grep "HTTP_STATUS:" "$LATEST_META" | cut -d: -f2)
-          RESPONSE_TIME=$(grep "TIME_TOTAL:" "$LATEST_META" | cut -d: -f2)
-          
-          echo "Latest API Status: $HTTP_STATUS"
-          echo "Latest Response Time: ${RESPONSE_TIME}s"
-          
-          if [ "$HTTP_STATUS" = "200" ]; then
-            echo "✅ API is healthy!"
-          else
-            echo "⚠️ API issue detected - Status: $HTTP_STATUS"
-          fi
-        fi
-        
-        # Show today's summary
-        if [ -f "${DATA_DIR}/daily_stats.json" ]; then
-          echo ""
-          echo "Today's Summary:"
-          cat "${DATA_DIR}/daily_stats.json"
-        fi
-        
-        echo "=================="
+        echo "🎉 Workflow completed successfully!"
+        echo "==================="
+        echo "Completion time: $(date)"
+        echo "Triggered by: ${{ github.event_name }}"
+        echo "Next scheduled run: In ~10-15 minutes (if using schedule trigger)"
+        echo "==================="
