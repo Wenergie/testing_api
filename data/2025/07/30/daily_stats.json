@@ -1,10 +1,12 @@
 {
   "date": "2025-07-30",
-  "total_calls": 1,
-  "successful_calls": 1,
-  "failed_calls": 0
+  "total_calls": 2,
+  "successful_calls": data/2025/07/30/metadata_011551.txt:1
+data/2025/07/30/metadata_022750.txt:1,
+  "failed_calls": data/2025/07/30/metadata_011551.txt:0
+data/2025/07/30/metadata_022750.txt:0
 0,
-  "success_rate_percent": 100,
-  "last_updated": "2025-07-30 01:15:55 UTC",
+  "success_rate_percent": ,
+  "last_updated": "2025-07-30 02:27:54 UTC",
   "last_trigger": "schedule"
 }
