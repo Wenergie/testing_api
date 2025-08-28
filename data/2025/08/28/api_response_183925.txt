@@ -1,0 +1,8 @@
+{"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": "{\"device_id\": \"D48AFCD012A0\", \"timestamp\": \"2025-08-28 19:10:26\", \"battery\": {\"status\": {\"code\": -1, \"description\": \"Unknown (-1)\"}, \"metrics\": {\"pack_voltage\": 0.0, \"pack_voltage_formatted\": \"0.0 V\", \"pack_current\": 0.0, \"pack_current_formatted\": \"0.0 A\", \"state_of_charge\": 0, \"state_of_charge_formatted\": \"0%\"}, \"energy\": {\"input_ah\": 0, \"output_ah\": 0, \"input_wh\": 0, \"output_wh\": 0, \"efficiency\": 0, \"formatted\": {\"input\": \"0 Ah / 0 Wh\", \"output\": \"0 Ah / 0 Wh\", \"efficiency\": \"0%\"}}, \"cells\": {\"count\": 0, \"min\": 0, \"max\": 0, \"avg\": 0, \"diff\": 0, \"total\": 0, \"formatted\": {\"voltage_range\": \"0 - 0 mV\", \"voltage_difference\": \"0 mV\", \"average_voltage\": \"0 mV\"}, \"voltages\": []}, \"fet_status\": {\"charging\": false, \"charging_formatted\": \"OFF\", \"discharging\": false, \"discharging_formatted\": \"OFF\"}, \"diagnostics\": {\"has_alerts\": false, \"active_alerts\": [], \"open_wires\": [], \"open_temp_sensors\": [], \"sanity_check_passed\": true}}}"}
+---METADATA---
+HTTP_STATUS:200
+TIME_TOTAL:3.439526
+TIME_CONNECT:0.282716
+SIZE_DOWNLOAD:1132
+TIMESTAMP:2025-08-28 18:39:25 UTC
+TRIGGER:schedule
