@@ -1,0 +1,8 @@
+{"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": "{\"device_id\": \"D48AFCD012A0\", \"timestamp\": \"2025-08-28 14:01:21\", \"battery\": {\"status\": {\"code\": 83, \"description\": \"Idle\"}, \"metrics\": {\"pack_voltage\": 557.1, \"pack_voltage_formatted\": \"55.71 V\", \"pack_current\": 1.9, \"pack_current_formatted\": \"1.9 A\", \"state_of_charge\": 99, \"state_of_charge_formatted\": \"99%\"}, \"energy\": {\"input_ah\": 2215, \"output_ah\": 2234, \"input_wh\": 119017, \"output_wh\": 115757, \"efficiency\": 97.26, \"formatted\": {\"input\": \"2215 Ah / 119017 Wh\", \"output\": \"2234 Ah / 115757 Wh\", \"efficiency\": \"97.26%\"}}, \"cells\": {\"count\": 16, \"min\": 3470, \"max\": 3500, \"avg\": 3485.0, \"diff\": 30, \"total\": 55760, \"formatted\": {\"voltage_range\": \"3470 - 3500 mV\", \"voltage_difference\": \"30 mV\", \"average_voltage\": \"3485.0 mV\"}, \"voltages\": [3477, 3499, 3486, 3487, 3476, 3500, 3491, 3470, 3495, 3495, 3472, 3489, 3496, 3472, 3481, 3474]}, \"fet_status\": {\"charging\": true, \"charging_formatted\": \"ON\", \"discharging\": false, \"discharging_formatted\": \"OFF\"}, \"diagnostics\": {\"has_alerts\": false, \"active_alerts\": [], \"open_wires\": [], \"open_temp_sensors\": [], \"sanity_check_passed\": false}}}"}
+---METADATA---
+HTTP_STATUS:200
+TIME_TOTAL:3.583953
+TIME_CONNECT:0.296166
+SIZE_DOWNLOAD:1292
+TIMESTAMP:2025-08-28 08:33:24 UTC
+TRIGGER:schedule
