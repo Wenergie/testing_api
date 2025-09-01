@@ -1,144 +1,144 @@
-name: API Monitor 24/7 - Alternative Schedule
+# name: API Monitor 24/7 - Alternative Schedule
 
-on:
-  schedule:
-    # Try every 10 minutes instead of 5 (sometimes more reliable)
-    - cron: '*/10 * * * *'
-    # Also try every 15 minutes
-    - cron: '0,15,30,45 * * * *'
+# on:
+#   schedule:
+#     # Try every 10 minutes instead of 5 (sometimes more reliable)
+#     - cron: '*/10 * * * *'
+#     # Also try every 15 minutes
+#     - cron: '0,15,30,45 * * * *'
   
-  # Allow manual triggering
-  workflow_dispatch:
+#   # Allow manual triggering
+#   workflow_dispatch:
   
-  # Trigger on push for testing
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'data/**'  # Don't trigger on data file changes
+#   # Trigger on push for testing
+#   push:
+#     branches: [ main ]
+#     paths-ignore:
+#       - 'data/**'  # Don't trigger on data file changes
 
-jobs:
-  monitor-api:
-    runs-on: ubuntu-latest
+# jobs:
+#   monitor-api:
+#     runs-on: ubuntu-latest
     
-    steps:
-    # Add a step to show when workflow runs
-    - name: Workflow Started
-      run: |
-        echo "🚀 Workflow started at: $(date)"
-        echo "Trigger event: ${{ github.event_name }}"
-        echo "Repository: ${{ github.repository }}"
+#     steps:
+#     # Add a step to show when workflow runs
+#     - name: Workflow Started
+#       run: |
+#         echo "🚀 Workflow started at: $(date)"
+#         echo "Trigger event: ${{ github.event_name }}"
+#         echo "Repository: ${{ github.repository }}"
     
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+#     - name: Checkout repository
+#       uses: actions/checkout@v3
+#       with:
+#         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Create Date-Based Directory Structure
-      run: |
-        YEAR=$(date +"%Y")
-        MONTH=$(date +"%m")
-        DAY=$(date +"%d")
-        DATE=$(date +"%Y-%m-%d")
+#     - name: Create Date-Based Directory Structure
+#       run: |
+#         YEAR=$(date +"%Y")
+#         MONTH=$(date +"%m")
+#         DAY=$(date +"%d")
+#         DATE=$(date +"%Y-%m-%d")
         
-        mkdir -p "data/${YEAR}/${MONTH}/${DAY}"
-        mkdir -p data/latest
+#         mkdir -p "data/${YEAR}/${MONTH}/${DAY}"
+#         mkdir -p data/latest
         
-        echo "📁 Created directory structure:"
-        echo "   data/${YEAR}/${MONTH}/${DAY}/"
+#         echo "📁 Created directory structure:"
+#         echo "   data/${YEAR}/${MONTH}/${DAY}/"
         
-        echo "YEAR=${YEAR}" >> $GITHUB_ENV
-        echo "MONTH=${MONTH}" >> $GITHUB_ENV
-        echo "DAY=${DAY}" >> $GITHUB_ENV
-        echo "DATE=${DATE}" >> $GITHUB_ENV
-        echo "DATA_DIR=data/${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
+#         echo "YEAR=${YEAR}" >> $GITHUB_ENV
+#         echo "MONTH=${MONTH}" >> $GITHUB_ENV
+#         echo "DAY=${DAY}" >> $GITHUB_ENV
+#         echo "DATE=${DATE}" >> $GITHUB_ENV
+#         echo "DATA_DIR=data/${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
     
-    - name: Call API and Store Response
-      run: |
-        TIMESTAMP=$(date +"%H%M%S")
+#     - name: Call API and Store Response
+#       run: |
+#         TIMESTAMP=$(date +"%H%M%S")
         
-        echo "🚀 Calling API at $(date)..."
-        echo "📁 Saving to: ${DATA_DIR}/"
-        echo "🔧 Triggered by: ${{ github.event_name }}"
+#         echo "🚀 Calling API at $(date)..."
+#         echo "📁 Saving to: ${DATA_DIR}/"
+#         echo "🔧 Triggered by: ${{ github.event_name }}"
         
-        curl -s "https://6cc502fvz8.execute-api.ap-south-1.amazonaws.com/prod" \
-          -w "\n---METADATA---\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}\nTIME_CONNECT:%{time_connect}\nSIZE_DOWNLOAD:%{size_download}\nTIMESTAMP:$(date '+%Y-%m-%d %H:%M:%S UTC')\nTRIGGER:${{ github.event_name }}\n" \
-          > "${DATA_DIR}/api_response_${TIMESTAMP}.txt"
+#         curl -s "https://6cc502fvz8.execute-api.ap-south-1.amazonaws.com/prod" \
+#           -w "\n---METADATA---\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}\nTIME_CONNECT:%{time_connect}\nSIZE_DOWNLOAD:%{size_download}\nTIMESTAMP:$(date '+%Y-%m-%d %H:%M:%S UTC')\nTRIGGER:${{ github.event_name }}\n" \
+#           > "${DATA_DIR}/api_response_${TIMESTAMP}.txt"
         
-        head -n -8 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/api_data_${TIMESTAMP}.json"
-        tail -n 7 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/metadata_${TIMESTAMP}.txt"
+#         head -n -8 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/api_data_${TIMESTAMP}.json"
+#         tail -n 7 "${DATA_DIR}/api_response_${TIMESTAMP}.txt" > "${DATA_DIR}/metadata_${TIMESTAMP}.txt"
         
-        HTTP_STATUS=$(grep "HTTP_STATUS:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
-        RESPONSE_TIME=$(grep "TIME_TOTAL:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
-        TRIGGER_TYPE=$(grep "TRIGGER:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
+#         HTTP_STATUS=$(grep "HTTP_STATUS:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
+#         RESPONSE_TIME=$(grep "TIME_TOTAL:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
+#         TRIGGER_TYPE=$(grep "TRIGGER:" "${DATA_DIR}/metadata_${TIMESTAMP}.txt" | cut -d: -f2)
         
-        echo "$(date '+%H:%M:%S'): Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}, File=api_response_${TIMESTAMP}.txt" >> "${DATA_DIR}/daily_log.txt"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): ${DATE} Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}" >> "data/master_log.txt"
+#         echo "$(date '+%H:%M:%S'): Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}, File=api_response_${TIMESTAMP}.txt" >> "${DATA_DIR}/daily_log.txt"
+#         echo "$(date '+%Y-%m-%d %H:%M:%S'): ${DATE} Status=$HTTP_STATUS, Time=${RESPONSE_TIME}s, Trigger=${TRIGGER_TYPE}" >> "data/master_log.txt"
         
-        cp "${DATA_DIR}/api_data_${TIMESTAMP}.json" "data/latest/latest_response.json"
-        cp "${DATA_DIR}/metadata_${TIMESTAMP}.txt" "data/latest/latest_metadata.txt"
+#         cp "${DATA_DIR}/api_data_${TIMESTAMP}.json" "data/latest/latest_response.json"
+#         cp "${DATA_DIR}/metadata_${TIMESTAMP}.txt" "data/latest/latest_metadata.txt"
         
-        echo "✅ API Response Summary:"
-        echo "Status Code: $HTTP_STATUS"
-        echo "Response Time: ${RESPONSE_TIME}s"
-        echo "Triggered by: ${TRIGGER_TYPE}"
-        echo "Saved to: ${DATA_DIR}/api_response_${TIMESTAMP}.txt"
+#         echo "✅ API Response Summary:"
+#         echo "Status Code: $HTTP_STATUS"
+#         echo "Response Time: ${RESPONSE_TIME}s"
+#         echo "Triggered by: ${TRIGGER_TYPE}"
+#         echo "Saved to: ${DATA_DIR}/api_response_${TIMESTAMP}.txt"
         
-        echo "First 3 lines of API response:"
-        head -3 "${DATA_DIR}/api_data_${TIMESTAMP}.json"
+#         echo "First 3 lines of API response:"
+#         head -3 "${DATA_DIR}/api_data_${TIMESTAMP}.json"
     
-    - name: Generate Daily Statistics
-      run: |
-        TODAY_TOTAL=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
-        TODAY_SUCCESS=$(grep -c "HTTP_STATUS:200" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
-        TODAY_ERRORS=$(grep -c "HTTP_STATUS:[^2]" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
+#     - name: Generate Daily Statistics
+#       run: |
+#         TODAY_TOTAL=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
+#         TODAY_SUCCESS=$(grep -c "HTTP_STATUS:200" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
+#         TODAY_ERRORS=$(grep -c "HTTP_STATUS:[^2]" ${DATA_DIR}/metadata_*.txt 2>/dev/null || echo "0")
         
-        if [ "$TODAY_TOTAL" -gt 0 ]; then
-          SUCCESS_RATE=$(( TODAY_SUCCESS * 100 / TODAY_TOTAL ))
-        else
-          SUCCESS_RATE=0
-        fi
+#         if [ "$TODAY_TOTAL" -gt 0 ]; then
+#           SUCCESS_RATE=$(( TODAY_SUCCESS * 100 / TODAY_TOTAL ))
+#         else
+#           SUCCESS_RATE=0
+#         fi
         
-        echo "{" > "${DATA_DIR}/daily_stats.json"
-        echo "  \"date\": \"${DATE}\"," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"total_calls\": ${TODAY_TOTAL}," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"successful_calls\": ${TODAY_SUCCESS}," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"failed_calls\": ${TODAY_ERRORS}," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"success_rate_percent\": ${SUCCESS_RATE}," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"last_updated\": \"$(date '+%Y-%m-%d %H:%M:%S UTC')\"," >> "${DATA_DIR}/daily_stats.json"
-        echo "  \"last_trigger\": \"${{ github.event_name }}\"" >> "${DATA_DIR}/daily_stats.json"
-        echo "}" >> "${DATA_DIR}/daily_stats.json"
+#         echo "{" > "${DATA_DIR}/daily_stats.json"
+#         echo "  \"date\": \"${DATE}\"," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"total_calls\": ${TODAY_TOTAL}," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"successful_calls\": ${TODAY_SUCCESS}," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"failed_calls\": ${TODAY_ERRORS}," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"success_rate_percent\": ${SUCCESS_RATE}," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"last_updated\": \"$(date '+%Y-%m-%d %H:%M:%S UTC')\"," >> "${DATA_DIR}/daily_stats.json"
+#         echo "  \"last_trigger\": \"${{ github.event_name }}\"" >> "${DATA_DIR}/daily_stats.json"
+#         echo "}" >> "${DATA_DIR}/daily_stats.json"
         
-        echo "📊 Daily Statistics for ${DATE}:"
-        echo "   Total calls: ${TODAY_TOTAL}"
-        echo "   Successful: ${TODAY_SUCCESS}"
-        echo "   Failed: ${TODAY_ERRORS}"
-        echo "   Success rate: ${SUCCESS_RATE}%"
+#         echo "📊 Daily Statistics for ${DATE}:"
+#         echo "   Total calls: ${TODAY_TOTAL}"
+#         echo "   Successful: ${TODAY_SUCCESS}"
+#         echo "   Failed: ${TODAY_ERRORS}"
+#         echo "   Success rate: ${SUCCESS_RATE}%"
         
-        cp "${DATA_DIR}/daily_stats.json" "data/latest/today_stats.json"
+#         cp "${DATA_DIR}/daily_stats.json" "data/latest/today_stats.json"
     
-    - name: Commit and Push Organized Data
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "API Monitor Bot"
+#     - name: Commit and Push Organized Data
+#       run: |
+#         git config --local user.email "action@github.com"
+#         git config --local user.name "API Monitor Bot"
         
-        git add data/
+#         git add data/
         
-        if [ -n "$(git status --porcelain)" ]; then
-          TODAY_CALLS=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
+#         if [ -n "$(git status --porcelain)" ]; then
+#           TODAY_CALLS=$(ls ${DATA_DIR}/api_response_*.txt 2>/dev/null | wc -l)
           
-          git commit -m "📊 API Monitor Data ${DATE} (#${TODAY_CALLS}) - $(date '+%H:%M:%S UTC') [${{ github.event_name }}]"
-          git push
+#           git commit -m "📊 API Monitor Data ${DATE} (#${TODAY_CALLS}) - $(date '+%H:%M:%S UTC') [${{ github.event_name }}]"
+#           git push
           
-          echo "✅ Committed and pushed organized data for ${DATE}"
-        else
-          echo "ℹ️ No new data to commit"
-        fi
+#           echo "✅ Committed and pushed organized data for ${DATE}"
+#         else
+#           echo "ℹ️ No new data to commit"
+#         fi
     
-    - name: Workflow Completion Summary
-      run: |
-        echo "🎉 Workflow completed successfully!"
-        echo "==================="
-        echo "Completion time: $(date)"
-        echo "Triggered by: ${{ github.event_name }}"
-        echo "Next scheduled run: In ~10-15 minutes (if using schedule trigger)"
-        echo "==================="
+#     - name: Workflow Completion Summary
+#       run: |
+#         echo "🎉 Workflow completed successfully!"
+#         echo "==================="
+#         echo "Completion time: $(date)"
+#         echo "Triggered by: ${{ github.event_name }}"
+#         echo "Next scheduled run: In ~10-15 minutes (if using schedule trigger)"
+#         echo "==================="
